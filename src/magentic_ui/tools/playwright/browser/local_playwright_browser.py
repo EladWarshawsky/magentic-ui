@@ -86,48 +86,36 @@ class LocalPlaywrightBrowser(
         self._context: Optional[BrowserContext] = None
 
     async def _start(self) -> None:
-        """
-        Start the browser resource.
-        """
-        self._playwright = await async_playwright().start()
-
-        launch_options: Dict[str, Any] = {"headless": self._headless}
-        if self._browser_channel:
-            launch_options["channel"] = self._browser_channel
-
-        if self._persistent_context and self._browser_data_dir:
-            # Ensure the browser data directory exists
-            Path(self._browser_data_dir).mkdir(parents=True, exist_ok=True)
-
-            # Launch persistent context
-            self._context = await self._playwright.chromium.launch_persistent_context(
-                self._browser_data_dir,
-                accept_downloads=self._enable_downloads,
-                **launch_options,
-                args=["--disable-extensions", "--disable-file-system"],
-                env={},
-            )
-        else:
-            # Launch regular browser and create new context
-            self._browser = await self._playwright.chromium.launch(
-                **launch_options,
-                args=["--disable-extensions", "--disable-file-system"],
-                env={} if self._headless else {"DISPLAY": ":0"},
-            )
-
-            self._context = await self._browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0",
-                accept_downloads=self._enable_downloads,
-            )
+            """
+            Start the browser resource by connecting to local Chrome via CDP.
+            """
+            self._playwright = await async_playwright().start()
+    
+            print("DEBUG: Attempting to connect to existing Chrome instance on port 9222...")
+            
+            try:
+                # Connect to the existing browser session
+                self._browser = await self._playwright.chromium.connect_over_cdp("http://localhost:9222")
+                
+                # Use the existing default context if available (this holds your cookies/logins)
+                if self._browser.contexts:
+                    self._context = self._browser.contexts[0]
+                else:
+                    # If for some reason no context exists, create one, though CDP usually has one
+                    self._context = await self._browser.new_context()
+                    
+                print("DEBUG: Successfully connected to local Chrome!")
+                
+            except Exception as e:
+                print(f"ERROR: Could not connect to Chrome. Make sure it is running with --remote-debugging-port=9222. Error: {e}")
+                raise e
 
     async def _close(self) -> None:
         """
-        Close the browser resource.
+        Close the connection, but DO NOT close the actual browser window.
         """
-        if self._context:
-            await self._context.close()
-        if self._browser:
-            await self._browser.close()
+        # We pass on closing the context/browser so your actual Chrome window stays open
+        # when you stop the agent.
         if self._playwright:
             await self._playwright.stop()
 
