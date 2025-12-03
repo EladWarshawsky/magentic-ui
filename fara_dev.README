@@ -1,0 +1,6 @@
+#launch google chrome with debugging, needed for running fara in browser
+
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222
+
+#run magentic ui so it opens in your browser localhost, no docker.
+magentic-ui --run-without-docker --port 8081 --config fara_config.yaml
