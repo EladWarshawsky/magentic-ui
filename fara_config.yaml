@@ -1,14 +1,14 @@
 model_config_local_surfer: &client_surfer
   provider: OpenAIChatCompletionClient
   config:
-    model: "microsoft/Fara-7B"
-    base_url: http://localhost:5000/v1
+    model: "huihui-fara-7b-abliterated"   # <-- update model name
+    base_url: http://127.0.0.1:8000/v1
     api_key: not-needed
     model_info:
       vision: true
       function_calling: true
       json_output: false
-      family: "unknown" 
+      family: "unknown"
       structured_output: false
       multiple_system_messages: false
 
@@ -18,3 +18,8 @@ web_surfer_client: *client_surfer
 file_surfer_client: *client_surfer
 action_guard_client: *client_surfer
 model_client: *client_surfer
+
+use_fara_agent: true
+websurfer_loop: true
+cooperative_planning: false
+autonomous_execution: true
