@@ -50,6 +50,13 @@ async def get_task_team(
     if magentic_ui_config is None:
         magentic_ui_config = MagenticUIConfig()
 
+    # --- FORCE CONFIGURATION OVERRIDES ---
+    # This forces the system to skip the Orchestrator (which Fara crashes on)
+    # and use the simple RoundRobin loop instead.
+    websurfer_loop_team = True
+    magentic_ui_config.use_fara_agent = True
+    # -------------------------------------
+
     def get_model_client(
         model_client_config: Union[ComponentModel, Dict[str, Any], None],
         is_action_guard: bool = False,
@@ -76,10 +83,6 @@ async def get_task_team(
         magentic_ui_config.approval_policy
         if magentic_ui_config.approval_policy
         else "never"
-    )
-
-    websurfer_loop_team: bool = (
-        magentic_ui_config.websurfer_loop if magentic_ui_config else False
     )
 
     model_client_coder = get_model_client(magentic_ui_config.model_client_configs.coder)
@@ -199,6 +202,8 @@ async def get_task_team(
             web_surfer = FaraWebSurfer.from_config(websurfer_config)
         else:
             web_surfer = WebSurfer.from_config(websurfer_config)
+
+    # IMPORTANT: This creates the simple User -> Agent -> User loop
     if websurfer_loop_team:
         # simplified team of only the web surfer
         team = RoundRobinGroupChat(
@@ -206,6 +211,8 @@ async def get_task_team(
             max_turns=10000,
         )
         return team
+
+    # -- Code below is for the full Orchestrator team (skipped when websurfer_loop_team is True) --
     coder_agent: CoderAgent | None = None
     file_surfer: FileSurfer | None = None
     if not magentic_ui_config.run_without_docker:
